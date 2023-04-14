@@ -6,14 +6,15 @@ from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 import cv2
 import pandas as pd
 import warnings
+import collections
 warnings.filterwarnings("ignore")
 
 def cleaningChar(ocrResult):
    ocrResult = str(ocrResult)
-   charCleaned= ocrResult.replace('.','').replace('[','').replace(']','').replace("'","").replace('-','').replace(' ','')
+   charCleaned= ocrResult.replace('.','').replace('[','').replace(']','').replace("'","").replace('-','').replace(' ','').replace(',','')
    return charCleaned
 
-def funEasyOcr(path) : 
+def funEasy(path) : 
     image = path
     image = cv2.imread(image)
     reader = easyocr.Reader(['en'], gpu=True , verbose=False)
@@ -29,7 +30,7 @@ def funPytesseract(path):
     cleanedResult = cleaningChar(result)
     return cleanedResult
 
-def funKerasOcr(path):
+def funKeras(path):
     images = [
     keras_ocr.tools.read(img) for img in [path]]
     pipeline = keras_ocr.pipeline.Pipeline()
@@ -44,7 +45,7 @@ def funKerasOcr(path):
     cleanedResult = cleaningChar(result)
     return cleanedResult
 
-def funPadleOcr(path):
+def funPadle(path):
    ocr = PaddleOCR(use_angle_cls=True, lang='en') 
    result = ocr.ocr(path, cls=True)
    for idx in range(len(result)):
@@ -58,7 +59,7 @@ def funPadleOcr(path):
    return txtsCleaned
 
 
-def funTrOcr(path):
+def funTr(path):
     processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
     model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
     image = path
@@ -66,12 +67,61 @@ def funTrOcr(path):
     pixel_values = processor(image, return_tensors="pt").pixel_values
     generated_ids = model.generate(pixel_values)
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    generated_text = cleaningChar(generated_text)
     return generated_text
 
+def election(easy,pytess,keras,padle,tr):
+   easyL = len(easy)
+   pytessL = len(pytess)
+   kerasL = len(keras)
+   padleL = len(padle)
+   trL = len(tr)
+   tableL = [easyL,pytessL,kerasL,padleL,trL]
+   counter = collections.Counter(tableL)
+   most_common = counter.most_common(1)[0]
+   mostCommonElement = most_common[0]
+   print(mostCommonElement)
+   print(tableL)
+   for i in range(mostCommonElement):
+      votes = []
+      if(trL == mostCommonElement):
+         print(' tr is alright')
+         v1= tr[i]
+         votes[0]=v1
+      else :
+         print('tr is wrong')   
+      if(padleL == mostCommonElement):
+         print(' tr is alright')
+      if(trL == mostCommonElement):
+         print(' tr is alright')
 
-path = 'Images/lp81.png'
-resultEasyocr= funPytesseract(path)
-print(resultEasyocr)
+
+   
+
+
+path = 'Images/lp82.png'
+resultEasy= funEasy(path)
+resultPytesseract = funPytesseract(path)
+resultKeras = funKeras(path)
+resultPadle = funPadle(path)
+resultTr = funTr(path)
+print('--------------------------------Easyocr-------------------------------------')
+print(resultEasy)
+print('----------------------------------------------------------------------------')
+print('--------------------------------pytess--------------------------------------')
+print(resultPytesseract)
+print('----------------------------------------------------------------------------')
+print('--------------------------------keras-------------------------------------')
+print(resultKeras)
+print('----------------------------------------------------------------------------')
+print('--------------------------------padle--------------------------------------')
+print(resultPadle)
+print('----------------------------------------------------------------------------')
+print('--------------------------------TR--------------------------------------')
+print(resultTr)
+print('----------------------------------------------------------------------------')
+
+election(resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr)
    
     
  
