@@ -71,6 +71,7 @@ def funTr(path):
     return generated_text
 
 def election(easy,pytess,keras,padle,tr):
+   finalResult=[]
    easyL = len(easy)
    pytessL = len(pytess)
    kerasL = len(keras)
@@ -79,27 +80,71 @@ def election(easy,pytess,keras,padle,tr):
    tableL = [easyL,pytessL,kerasL,padleL,trL]
    counter = collections.Counter(tableL)
    most_common = counter.most_common(1)[0]
-   mostCommonElement = most_common[0]
-   print(mostCommonElement)
+   mostCommonLength = most_common[0]
+   print(mostCommonLength)
    print(tableL)
-   for i in range(mostCommonElement):
+   for i in range(mostCommonLength):
       votes = []
-      if(trL == mostCommonElement):
-         print(' tr is alright')
+      coef = []
+      if(trL == mostCommonLength):
+         #print(' tr is alright')
          v1= tr[i]
-         votes[0]=v1
-      else :
-         print('tr is wrong')   
-      if(padleL == mostCommonElement):
-         print(' tr is alright')
-      if(trL == mostCommonElement):
-         print(' tr is alright')
+         votes.append(v1)
+         coef.append(4)  
+      if(padleL == mostCommonLength):
+         #print(' padle is alright')
+         v2= padle[i]
+         votes.append(v2)
+         coef.append(3)
+      if(kerasL == mostCommonLength):
+         #print(' Keras is alright')
+         v3= keras[i]
+         votes.append(v3)
+         coef.append(3)      
+      if(pytessL == mostCommonLength):
+         #print(' Keras is alright')
+         v4= pytess[i]
+         votes.append(v4)
+         coef.append(1)      
+      if(easyL == mostCommonLength):
+         #print(' easy is alright')
+         v5= easy[i]
+         votes.append(v5)
+         coef.append(2)
+      #print(votes)
+      #print(coef)
+      votesCount={}
+      for i, item in enumerate(votes):
+        if item in votesCount:
+          votesCount[item]["count"] += 1
+          votesCount[item]["positions"].append(i)
+        else:
+          votesCount[item] = {"count": 1, "positions": [i]}
+      singleCharVote = []
+      characters= []
+      for item, count_dict in votesCount.items():
+         print(f"{item} appears {count_dict['count']} times at positions {count_dict['positions']}")
+         itemVote=0
+         for i in range(count_dict['count']):
+            itemVote = itemVote+coef[i]
+         print(f"{item} has {itemVote} votes")
+         characters.append(item)
+         
+         singleCharVote.append(itemVote)
+      print(singleCharVote)
+      maxIndex = singleCharVote.index(max(singleCharVote))
+      print(f'items: {characters}')
+      print(f'max index is  {maxIndex}')
+      chosenOne = characters[maxIndex]
+      print(f"{characters[maxIndex]} get biggest number of votes witch is {max(singleCharVote)}")
+      finalResult.append(chosenOne)
+      print(f'coefficient {coef}')
+      print('----------------------------------------------------------------------------')
+   print(f'The result of the pull is {finalResult}')
 
 
-   
 
-
-path = 'Images/lp82.png'
+path = 'Images/lp1.png'
 resultEasy= funEasy(path)
 resultPytesseract = funPytesseract(path)
 resultKeras = funKeras(path)
