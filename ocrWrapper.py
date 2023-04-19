@@ -7,13 +7,16 @@ import cv2
 import pandas as pd
 import warnings
 import collections
+from multiprocessing import Process
 warnings.filterwarnings("ignore")
-
+def writing(i,resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr):
+   with open(f'logs/{i+1}.txt', "w") as file:
+     file.write(f'EasyOcr:{resultEasy} length: {len(resultEasy)} \n Pytess: {resultPytesseract} length: {len(resultPytesseract)} \n keras: {resultKeras} length: {len(resultKeras)} \n padle: {resultPadle} length: {len(resultPadle)} \n tr:{resultTr} length: {len(resultTr)} ')   
 def cleaningChar(ocrResult):
    ocrResult = str(ocrResult)
-   charCleaned= ocrResult.replace('.','').replace('[','').replace(']','').replace("'","").replace('-','').replace(' ','').replace(',','')
+   ocrResult = ocrResult.upper()
+   charCleaned= ocrResult.replace('.','').replace('[','').replace(']','').replace("'","").replace('-','').replace(' ','').replace(',','').replace('|','').replace('\n','')
    return charCleaned
-
 def funEasy(path) : 
     image = path
     image = cv2.imread(image)
@@ -21,7 +24,6 @@ def funEasy(path) :
     result = reader.readtext(image,detail=0, rotation_info=[90,180,270])
     cleanedResult = cleaningChar(result)
     return cleanedResult
-
 def funPytesseract(path):
     image = path
     image = cv2.imread(image)
@@ -29,7 +31,6 @@ def funPytesseract(path):
     result=tess.image_to_string(image,lang='eng') #converts image characters to string
     cleanedResult = cleaningChar(result)
     return cleanedResult
-
 def funKeras(path):
     images = [
     keras_ocr.tools.read(img) for img in [path]]
@@ -44,7 +45,6 @@ def funKeras(path):
     result = ''.join(list)
     cleanedResult = cleaningChar(result)
     return cleanedResult
-
 def funPadle(path):
    ocr = PaddleOCR(use_angle_cls=True, lang='en') 
    result = ocr.ocr(path, cls=True)
@@ -57,8 +57,6 @@ def funPadle(path):
    print('-----------------------txts')
    txtsCleaned = cleaningChar(txts) 
    return txtsCleaned
-
-
 def funTr(path):
     processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
     model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
@@ -69,7 +67,6 @@ def funTr(path):
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
     generated_text = cleaningChar(generated_text)
     return generated_text
-
 def election(easy,pytess,keras,padle,tr):
    finalResult=[]
    easyL = len(easy)
@@ -81,38 +78,31 @@ def election(easy,pytess,keras,padle,tr):
    counter = collections.Counter(tableL)
    most_common = counter.most_common(1)[0]
    mostCommonLength = most_common[0]
-   print(mostCommonLength)
    print(tableL)
    for i in range(mostCommonLength):
       votes = []
       coef = []
-      if(trL == mostCommonLength):
-         #print(' tr is alright')
+      if(i <= trL and i< mostCommonLength and trL>0):
          v1= tr[i]
          votes.append(v1)
          coef.append(4)  
-      if(padleL == mostCommonLength):
-         #print(' padle is alright')
+      if(i <= padleL and i< mostCommonLength and padleL>0):
          v2= padle[i]
          votes.append(v2)
          coef.append(3)
-      if(kerasL == mostCommonLength):
-         #print(' Keras is alright')
+      if(i <=kerasL and i< mostCommonLength and kerasL>0):
          v3= keras[i]
          votes.append(v3)
-         coef.append(3)      
-      if(pytessL == mostCommonLength):
-         #print(' Keras is alright')
+         coef.append(2)      
+      if(i <= pytessL and i< mostCommonLength and pytessL>0):
          v4= pytess[i]
          votes.append(v4)
          coef.append(1)      
-      if(easyL == mostCommonLength):
-         #print(' easy is alright')
+      if(i<easyL and i< mostCommonLength):
          v5= easy[i]
          votes.append(v5)
          coef.append(2)
-      #print(votes)
-      #print(coef)
+      print(votes)
       votesCount={}
       for i, item in enumerate(votes):
         if item in votesCount:
@@ -125,53 +115,49 @@ def election(easy,pytess,keras,padle,tr):
       for item, count_dict in votesCount.items():
          print(f"{item} appears {count_dict['count']} times at positions {count_dict['positions']}")
          itemVote=0
-         for i in range(count_dict['count']):
+         pos=count_dict['positions']
+         for i in pos:
             itemVote = itemVote+coef[i]
          print(f"{item} has {itemVote} votes")
          characters.append(item)
-         
          singleCharVote.append(itemVote)
-      print(singleCharVote)
       maxIndex = singleCharVote.index(max(singleCharVote))
-      print(f'items: {characters}')
-      print(f'max index is  {maxIndex}')
       chosenOne = characters[maxIndex]
       print(f"{characters[maxIndex]} get biggest number of votes witch is {max(singleCharVote)}")
       finalResult.append(chosenOne)
       print(f'coefficient {coef}')
       print('----------------------------------------------------------------------------')
    print(f'The result of the pull is {finalResult}')
-
-
-
-path = 'Images/lp1.png'
-resultEasy= funEasy(path)
-resultPytesseract = funPytesseract(path)
-resultKeras = funKeras(path)
-resultPadle = funPadle(path)
-resultTr = funTr(path)
-print('--------------------------------Easyocr-------------------------------------')
-print(resultEasy)
-print('----------------------------------------------------------------------------')
-print('--------------------------------pytess--------------------------------------')
-print(resultPytesseract)
-print('----------------------------------------------------------------------------')
-print('--------------------------------keras-------------------------------------')
-print(resultKeras)
-print('----------------------------------------------------------------------------')
-print('--------------------------------padle--------------------------------------')
-print(resultPadle)
-print('----------------------------------------------------------------------------')
-print('--------------------------------TR--------------------------------------')
-print(resultTr)
-print('----------------------------------------------------------------------------')
-
-election(resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr)
-   
-    
- 
-
-  
-    
-
-
+   return finalResult
+def main():
+  #for i in range(99):
+   path = f'Images/lp10.png'
+   easyPr = funPytesseract(path)
+   pytessPr = funPytesseract(path)
+   resultEasy= funEasy(path)
+   resultPytesseract = funPytesseract(path)
+   resultKeras = funKeras(path)
+   resultPadle = funPadle(path)
+   resultTr = funTr(path)
+   print('----------------------------------------------------------------------------')
+   #print(f'For the image number whos number is  {i+1} the results are ') 
+   print('--------------------------------Easyocr-------------------------------------')
+   print(resultEasy)
+   print(f'length: {len(resultEasy)}')
+   print('--------------------------------pytess--------------------------------------')
+   print(resultPytesseract)
+   print(f'length: {len(resultPytesseract)}')
+   print('--------------------------------keras-------------------------------------')
+   print(resultKeras)
+   print(f'length: {len(resultKeras)}')
+   print('--------------------------------padle--------------------------------------')
+   print(resultPadle)
+   print(f'length: {len(resultPadle)}')
+   print('--------------------------------TR--------------------------------------')
+   print(resultTr)
+   print(f'length: {len(resultTr)}')
+   print('----------------------------------------------------------------------------')
+   election(resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr)
+   #writing(resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr)
+if __name__ == "__main__":
+    main()
