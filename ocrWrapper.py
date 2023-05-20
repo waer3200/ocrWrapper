@@ -11,6 +11,8 @@ import collections
 from multiprocessing import Process
 from imutils import paths
 import argparse
+from collections import defaultdict
+from collections import Counter
 
 def writingLoop(i,resultEasy,resultPytesseract,resultKeras,resultPadle,resultTr):
    with open(f'arlogs/{i+1}.txt', "w", encoding="utf-8") as file:
@@ -134,67 +136,100 @@ def funTr(path):
     generated_text = cleaningChar(generated_text)
     return generated_text
 def election(easy,pytess,keras,padle,tr):
-   finalResult=[]
-   easyL = len(easy)
-   pytessL = len(pytess)
-   kerasL = len(keras)
-   padleL = len(padle)
-   trL = len(tr)
-   tableL = [kerasL,padleL,trL]
-   counter = collections.Counter(tableL)
-   most_common = counter.most_common(1)[0]
-   mostCommonLength = most_common[0]
-   print(tableL)
-   for i in range(mostCommonLength):
-      votes = []
-      coef = []
-      if(i < trL and i< mostCommonLength and trL>0 ):
-         v1= tr[i]
-         votes.append(v1)
-         coef.append(4)  
-      if(i < padleL and i< mostCommonLength and padleL>0 ):
-         v2= padle[i]
-         votes.append(v2)
-         coef.append(5)
-      if(i < kerasL and i< mostCommonLength and kerasL>0):
-         v3= keras[i]
-         votes.append(v3)
-         coef.append(3)      
-      if(i <  pytessL and i< mostCommonLength and pytessL>0):
-         v4= pytess[i]
-         votes.append(v4)
-         coef.append(1)      
-      if(i < easyL and i< mostCommonLength and easyL>0):
-         v5= easy[i]
-         votes.append(v5)
-         coef.append(1)
-      print(votes)
-      votesCount={}
-      for i, item in enumerate(votes):
-        if item in votesCount:
-          votesCount[item]["count"] += 1
-          votesCount[item]["positions"].append(i)
-        else:
-          votesCount[item] = {"count": 1, "positions": [i]}
-      singleCharVote = []
-      characters= []
-      for item, count_dict in votesCount.items():
-         print(f"{item} est apparu {count_dict['count']} fois a la position {count_dict['positions']}")
-         itemVote=0
-         pos=count_dict['positions']
-         for i in pos:
-            itemVote = itemVote+coef[i]
-         print(f"{item} à {itemVote} votes")
-         characters.append(item)
-         singleCharVote.append(itemVote)
-      maxIndex = singleCharVote.index(max(singleCharVote))
-      chosenOne = characters[maxIndex]
-      print(f"{characters[maxIndex]} a eu le plus grand nombre de votes qui est  {max(singleCharVote)}")
-      finalResult.append(chosenOne)
-      print(f'coefficient {coef}')
-      print('----------------------------------------------------------------------------')
-   print(f'Le résultat du vote  {finalResult}')
-   return finalResult
+ chaines = [easy, pytess, keras, padle, tr]
+ allResult = easy+pytess+keras+padle+tr
+ #occurenceDic = dict(Counter(allResult))
+ occurrenceDic = {}
+ for char, count in Counter(allResult).items():
+   occurrenceDic[char] = count
+ occurenceList= list(occurrenceDic.keys())
+ print(occurenceList)
+ occurrences = defaultdict(list)
+ coefficients = [1, 1, 3, 4, 5]
+ finalDic={}
+ for h , chaine in enumerate(chaines):
+  print('*****************************************************')
+  if(len(chaine)>0):
+   hDic={}
+   for i, char in enumerate(occurenceList):
+     iDic= {}
+     print(f'char: {char}')
+     print(f'i{i}')
+     positions=[]
+     Jnotempty= []
+     for j, stringTocompare in enumerate(chaines):
+      if(len(stringTocompare)>0):
+          Jnotempty.append(j)
+          print(chaine)
+          if(j== Jnotempty[0]):
+           for k in range(len(chaine)):
+            #print(chaine[k])
+             if chaine[k] == char:
+               positions.append(k)
+          print(positions)
+          dict = {value:[] for value in positions }
+        
+          for position in positions:  
+            sumPositive=0
+            sumNegative=0 
+            if len(stringTocompare)>=0 and len(stringTocompare)>position and stringTocompare[position]==char:   
+              print("Le caractère '{}' existe à la position {} dans la chaîne {}.".format(char, position,stringTocompare))
+              if(position  in dict ):
+               sumPositive=sumPositive+coefficients[j]
+               dict[position] = sumPositive 
+            else:
+              print("Le caractère '{}' n'existe pas à la position {} dans la chaîne {}.".format(char, position,stringTocompare)) 
+              if(position in dict):
+               sumNegative= sumNegative-coefficients[j]
+               dict[position]= sumNegative
+          print("----------")
+          for key in dict:
+             if key in iDic:
+                iDic[key] = dict[key] + iDic[key]  
+          for key in dict:
+             if key not in iDic:
+                iDic[key] = dict[key]  
+          for key in iDic:
+             if key not in iDic:
+                iDic[key] = iDic[key]
+    
+     print('----------------------------------------')        
+     hDicFormat={}
+     hDicFormat[char]=iDic    
+     hDic.update(hDicFormat)
+  #print('***********************************************')    
+   if not finalDic:
+     finalDic = hDic
+   else:
+     for key, value in hDic.items():
+         if key in finalDic :
+             finalDic[key].update(value)
+         else:
+             finalDic[key] = value    
+ for key, nested_dict in finalDic.items():
+     for nested_key, value in list(nested_dict.items()):
+         if value < 0:
+             del nested_dict[nested_key]
+ finalDic = {key: nested_dict for key, nested_dict in finalDic.items() if nested_dict}
+
+ for key, nested_dict in finalDic.items():
+     remaining_keys = list(nested_dict.keys())
+     nested_dict.clear()
+     finalDic[key] = remaining_keys
+ print(finalDic)
+ max_position = max(max(positions) for positions in finalDic.values())
+ table = [[] for _ in range(max_position + 1)]
+ for key, positions in finalDic.items():
+    for position in positions:
+        table[position].append(key)
+
+ table_string = ''
+ for row in table:
+    table_string += ' '.join(row) 
+
+ print(table_string)
+ return table_string
+
 def electionAr(easy,pytess,padle):
    finalResult=[]
    easyL = len(easy)
@@ -346,7 +381,6 @@ def identity(license):
  yearChar = str(yearInt)
  completeYear=""
  if( yearInt >= 0 and yearInt<=23):
-    print(11111111111111111111)
     if(len(yearChar)== 1):
       completeYear = "200"+yearChar
     if(len(yearChar)== 2):
@@ -363,7 +397,7 @@ def identity(license):
 def main():
   #for i in range(68):
    language = 'en' 
-   path = f'Images/lp11.png'
+   path = f'C:/Users/walid/Desktop/Pfe/ocrWrapper/Images/lp66.png'
    blury = bluryDetection(path)
    print(blury)
    resultEasy= funEasy(path , language)
@@ -375,19 +409,19 @@ def main():
    #print(f'For the image number whos number is  {i+1} the results are ') 
    print('--------------------------------Easyocr-------------------------------------')
    print(resultEasy)
-   print(f'length: {len(resultEasy)}')
+   print(f'Taille de la chaine : {len(resultEasy)}')
    print('--------------------------------pytess--------------------------------------')
    print(resultPytesseract)
-   print(f'length: {len(resultPytesseract)}')
+   print(f'Taille de la chaine: {len(resultPytesseract)}')
    print('--------------------------------keras-------------------------------------')
    print(resultKeras)
-   print(f'length: {len(resultKeras)}')
+   print(f'Taille de la chaine: {len(resultKeras)}')
    print('--------------------------------padle--------------------------------------')
    print(resultPadle)
-   print(f'length: {len(resultPadle)}')
+   print(f'Taille de la chaine: {len(resultPadle)}')
    print('--------------------------------TR--------------------------------------')
    print(resultTr)
-   print(f'length: {len(resultTr)}')
+   print(f'Taille de la chaine: {len(resultTr)}')
    print('----------------------------------------------------------------------------')
    
    #writingLoop(i,iresultEasy,resultPytesseract,resultKeras,resultPadle,resultTr)
